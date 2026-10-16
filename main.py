@@ -1,13 +1,17 @@
 import os
+import asyncio
 import aiohttp
+from aiohttp import web
 import discord
 
+# Configure Discord Intents
 intents = discord.Intents.default()
 intents.members = True  # Required to detect member joins
 client = discord.Client(intents=intents)
 
 N8N_WEBHOOK_URL = os.environ.get("N8N_WEBHOOK_URL")
 PORT = int(os.environ.get("PORT", 10000))
+DISCORD_BOT_TOKEN = os.environ.get("DISCORD_BOT_TOKEN")
 
 @client.event
 async def on_ready():
@@ -22,7 +26,7 @@ async def on_member_join(member):
         "user": {
             "username": member.name,
             "id": str(member.id),
-            "discriminator": member.discriminator
+            "discriminator": getattr(member, "discriminator", "0")
         },
         "guild_id": str(member.guild.id)
     }
@@ -39,32 +43,32 @@ async def on_member_join(member):
                 else:
                     print(f"Failed to trigger n8n. Status: {response.status}")
         except Exception as e:
-                    print(f"Exception while calling n8n webhook: {e}")
+            print(f"Exception while calling n8n webhook: {e}")
 
-# Simple HTTP dummy server to satisfy Render's Web Service port requirement
-from aiohttp import web
-
+# Simple HTTP health-check server to satisfy Render's Web Service port binding requirement
 async def health_check(request):
     return web.Response(text="RoDAAI Bot Service is running!")
 
-app = web.Application()
-app.router.add_get("/", health_check)
+async def main():
+    if not DISCORD_BOT_TOKEN:
+        print("Error: DISCORD_BOT_TOKEN environment variable is missing!")
+        return
 
-async def start_web_server():
+    # Start the aiohttp web server for Render health checks
+    app = web.Application()
+    app.router.add_get("/", health_check)
     runner = web.AppRunner(app)
     await runner.setup()
     site = web.TCPSite(runner, "0.0.0.0", PORT)
     await site.start()
     print(f"Health check web server running on port {PORT}")
 
-import asyncio
+    # Start the Discord client
+    async with client:
+        await client.start(DISCORD_BOT_TOKEN)
 
 if __name__ == "__main__":
-    token = os.environ.get("DISCORD_BOT_TOKEN")
-    if not token:
-        print("Error: DISCORD_BOT_TOKEN environment variable is missing!")
-        exit(1)
-        
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(start_web_server())
-    client.run(token)
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        print("Bot stopped.")
