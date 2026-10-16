@@ -6,7 +6,7 @@ intents = discord.Intents.default()
 intents.members = True  # Required to detect member joins
 client = discord.Client(intents=intents)
 
-N8N_WEBHOOK_URL = os.environ.get("https://rodaai.app.n8n.cloud/webhook-test/discord-member-join")
+N8N_WEBHOOK_URL = os.environ.get("N8N_WEBHOOK_URL")
 PORT = int(os.environ.get("PORT", 10000))
 
 @client.event
@@ -60,7 +60,7 @@ async def start_web_server():
 import asyncio
 
 if __name__ == "__main__":
-    token = os.environ.get("MTU1OTg2NzkyMTI2ODc0MDE1Nw.GoPLve.c3FucdfsOUwHeMOt1wiJt3qO7Y7a7rL1W6wYu4")
+    token = os.environ.get("DISCORD_BOT_TOKEN")
     if not token:
         print("Error: DISCORD_BOT_TOKEN environment variable is missing!")
         exit(1)
